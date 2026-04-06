@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulador de Dinâmica Longitudinal Ferroviária</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-primary); color: var(--text-primary);
+      min-height: 100vh; overflow-x: hidden;
+    }
+    :root {
+      --bg-primary:    #0d1117; --bg-secondary:  #161b22;
+      --bg-tertiary:   #1c2333; --bg-card:       #1a1f2e;
+      --border-subtle: #30363d; --border-accent: #3d3420;
+      --text-primary:   #e6edf3; --text-secondary: #8b949e; --text-muted: #555d68;
+      --accent-yellow:  #f0b232; --accent-orange:  #e88a2a;
+      --accent-red:     #d94f4f; --accent-green:   #3fb950; --accent-blue: #58a6ff;
+      --gradient-rail:  linear-gradient(135deg, var(--accent-yellow), var(--accent-orange));
+      --gradient-panel: linear-gradient(180deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
+      --spacing-xs: 0.25rem; --spacing-sm: 0.5rem;
+      --spacing-md: 1rem;    --spacing-lg: 1.5rem;
+      --spacing-xl: 2rem;    --spacing-xxl: 3rem;
+      --font-mono: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+      --radius-sm: 6px; --radius-md: 10px; --radius-lg: 16px;
+      --shadow-card: 0 4px 24px rgba(0,0,0,0.4);
+      --shadow-glow: 0 0 12px rgba(240,178,50,0.15);
+      --panel-width: 300px; --header-height: 56px;
+    }
+    .app-container {
+      display: grid; grid-template-columns: var(--panel-width) 1fr;
+      grid-template-rows: var(--header-height) 1fr;
+      grid-template-areas: "header header" "panel viewport"; min-height: 100vh;
+    }
+    .app-header {
+      grid-area: header; display: flex; align-items: center; gap: var(--spacing-md);
+      padding: 0 var(--spacing-lg); background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-subtle); position: sticky; top: 0; z-index: 100;
+    }
+    .app-header__icon {
+      width: 32px; height: 32px; background: var(--gradient-rail);
+      border-radius: var(--radius-sm); display: grid; place-items: center; font-size: 1rem;
+    }
+    .app-header__title { font-size: 1rem; font-weight: 600; letter-spacing: 0.02em; }
+    .app-header__title span {
+      background: var(--gradient-rail);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .app-header__badge {
+      margin-left: auto; font-family: var(--font-mono); font-size: 0.7rem;
+      padding: var(--spacing-xs) var(--spacing-sm);
+      border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); color: var(--text-muted);
+    }
+    .config-panel {
+      grid-area: panel; background: var(--gradient-panel);
+      border-right: 1px solid var(--border-subtle); padding: var(--spacing-lg);
+      overflow-y: auto; display: flex; flex-direction: column; gap: var(--spacing-lg);
+    }
+    .config-panel__title {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--text-muted);
+      padding-bottom: var(--spacing-sm); border-bottom: 1px solid var(--border-subtle);
+    }
+    .param-group { display: flex; flex-direction: column; gap: var(--spacing-md); }
+    .param-group__label {
+      font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--accent-yellow);
+      display: flex; align-items: center; gap: var(--spacing-sm);
+    }
+    .param-group__label::before {
+      content: ''; display: inline-block; width: 4px; height: 14px;
+      background: var(--gradient-rail); border-radius: 2px;
+    }
+    .field { display: flex; flex-direction: column; gap: var(--spacing-xs); }
+    .field__label { font-size: 0.75rem; color: var(--text-secondary); }
+    .field__input {
+      font-family: var(--font-mono); font-size: 0.85rem;
+      padding: var(--spacing-sm) var(--spacing-md); background: var(--bg-primary);
+      border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);
+      color: var(--text-primary); outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .field__input:focus { border-color: var(--accent-yellow); box-shadow: var(--shadow-glow); }
+    .field__input::placeholder { color: var(--text-muted); }
+    .btn {
+      font-family: var(--font-mono); font-size: 0.8rem; font-weight: 600;
+      padding: var(--spacing-sm) var(--spacing-md); border: none;
+      border-radius: var(--radius-sm); cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.2s;
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn--primary { background: var(--gradient-rail); color: var(--bg-primary); box-shadow: 0 2px 12px rgba(240,178,50,0.25); }
+    .btn--primary:hover { box-shadow: 0 4px 20px rgba(240,178,50,0.35); }
+    .btn--primary:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+    .btn--secondary { background: transparent; color: var(--text-secondary); border: 1px solid var(--border-subtle); }
+    .btn--secondary:hover { border-color: var(--text-secondary); color: var(--text-primary); }
+    .btn--small { padding: var(--spacing-xs) var(--spacing-sm); font-size: 0.7rem; }
+    .panel-actions {
+      display: flex; gap: var(--spacing-sm); margin-top: auto;
+      padding-top: var(--spacing-lg); border-top: 1px solid var(--border-subtle);
+    }
+    .viewport {
+      grid-area: viewport; display: flex; flex-direction: column;
+      gap: var(--spacing-md); padding: var(--spacing-md); overflow-y: auto;
+    }
+    .train-canvas-section {
+      background: var(--bg-card); border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md); box-shadow: var(--shadow-card); overflow: hidden;
+    }
+    .train-canvas-section__header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: var(--spacing-sm) var(--spacing-md);
+      background: var(--bg-tertiary); border-bottom: 1px solid var(--border-subtle);
+    }
+    .train-canvas-section__title {
+      font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);
+      display: flex; align-items: center; gap: var(--spacing-sm);
+    }
+    .train-canvas-section__title .dot {
+      width: 8px; height: 8px; background: var(--accent-green);
+      border-radius: 50%; box-shadow: 0 0 6px rgba(63,185,80,0.5);
+    }
+    .train-canvas-section__controls { display: flex; align-items: center; gap: var(--spacing-sm); }
+    .train-canvas-section__info { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-muted); }
+    .train-canvas-section canvas {
+      display: block; width: 100%; height: 320px; cursor: pointer;
+      background: radial-gradient(ellipse at 50% 120%, #1a2235 0%, var(--bg-primary) 70%);
+    }
+    .charts-section { display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md); }
+    .chart-panel {
+      background: var(--bg-card); border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md); box-shadow: var(--shadow-card);
+      overflow: hidden; display: flex; flex-direction: column;
+    }
+    .chart-panel__header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: var(--spacing-sm) var(--spacing-md);
+      background: var(--bg-tertiary); border-bottom: 1px solid var(--border-subtle);
+    }
+    .chart-panel__title {
+      font-size: 0.7rem; font-weight: 600; color: var(--text-secondary);
+      text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .chart-panel canvas { display: block; width: 100%; height: 200px; background: var(--bg-primary); }
+    .sim-status {
+      margin-top: var(--spacing-md); padding: var(--spacing-md);
+      background: var(--bg-primary); border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md); font-family: var(--font-mono);
+      font-size: 0.7rem; color: var(--text-secondary); display: none;
+    }
+    .sim-status.visible { display: block; }
+    .sim-status__row { display: flex; justify-content: space-between; padding: var(--spacing-xs) 0; border-bottom: 1px solid var(--border-subtle); }
+    .sim-status__row:last-child { border-bottom: none; }
+    .sim-status__label { color: var(--text-muted); }
+    .sim-status__value { color: var(--accent-yellow); }
+    @media (max-width: 900px) {
+      .app-container {
+        grid-template-columns: 1fr; grid-template-rows: var(--header-height) auto 1fr;
+        grid-template-areas: "header" "panel" "viewport";
+      }
+      .config-panel { border-right: none; border-bottom: 1px solid var(--border-subtle); max-height: 300px; }
+      .charts-section { grid-template-columns: 1fr; }
+    }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <div class="app-header__icon" aria-hidden="true">🚂</div>
+      <h1 class="app-header__title"><span>LongDynamics</span> — Simulador Ferroviário</h1>
+      <span class="app-header__badge" id="version-badge">v0.5.0 · charts</span>
+    </header>
+
+    <aside class="config-panel" aria-label="Painel de Configuração">
+      <p class="config-panel__title">Parâmetros da Simulação</p>
+      <div class="param-group">
+        <h2 class="param-group__label">Trem</h2>
+        <div class="field"><label class="field__label" for="total-mass">Peso Total (t)</label><input class="field__input" type="number" id="total-mass" value="500" min="10" step="10"></div>
+        <div class="field"><label class="field__label" for="loco-power">Potência da Locomotiva (kW)</label><input class="field__input" type="number" id="loco-power" value="3000" min="100" step="50"></div>
+        <div class="field"><label class="field__label" for="max-traction">Esforço Máximo de Tração (kN)</label><input class="field__input" type="number" id="max-traction" value="250" min="10" step="5"></div>
+      </div>
+      <div class="param-group">
+        <h2 class="param-group__label">Via</h2>
+        <div class="field"><label class="field__label" for="track-length">Comprimento Total (km)</label><input class="field__input" type="number" id="track-length" value="10" min="0.1" step="0.5"></div>
+        <div class="field"><label class="field__label" for="gradient">Declividade (‰)</label><input class="field__input" type="number" id="gradient" value="0" step="0.5" min="-30" max="30"></div>
+        <div class="field"><label class="field__label" for="max-speed">Velocidade Máxima Permitida (km/h)</label><input class="field__input" type="number" id="max-speed" value="90" min="10" step="5"></div>
+      </div>
+      <div class="param-group">
+        <h2 class="param-group__label">Controle</h2>
+        <div class="field"><label class="field__label" for="target-speed">Velocidade Alvo de Cruzeiro (km/h)</label><input class="field__input" type="number" id="target-speed" value="80" min="10" step="5"></div>
+        <div class="panel-actions">
+          <button class="btn btn--primary" id="btn-simulate">▶ Simular</button>
+          <button class="btn btn--secondary" id="btn-reset">↺ Resetar</button>
+        </div>
+      </div>
+      <div class="sim-status" id="sim-status">
+        <div class="sim-status__row"><span class="sim-status__label">Fase</span><span class="sim-status__value" id="status-phase">—</span></div>
+        <div class="sim-status__row"><span class="sim-status__label">Tempo</span><span class="sim-status__value" id="status-time">—</span></div>
+        <div class="sim-status__row"><span class="sim-status__label">Velocidade</span><span class="sim-status__value" id="status-speed">—</span></div>
+        <div class="sim-status__row"><span class="sim-status__label">Posição</span><span class="sim-status__value" id="status-position">—</span></div>
+      </div>
+    </aside>
+
+    <main class="viewport">
+      <section class="train-canvas-section" aria-label="Animação do Trem">
+        <div class="train-canvas-section__header">
+          <span class="train-canvas-section__title"><span class="dot"></span> Visualização da Composição</span>
+          <div class="train-canvas-section__controls">
+            <button class="btn btn--secondary btn--small" id="btn-play-pause" disabled>⏸ Pause</button>
+            <span class="train-canvas-section__info" id="canvas-fps">-- FPS</span>
+          </div>
+        </div>
+        <canvas id="train-canvas" width="1200" height="320"></canvas>
+      </section>
+
+      <section class="charts-section" aria-label="Gráficos de Resultados">
+        <article class="chart-panel">
+          <div class="chart-panel__header"><h3 class="chart-panel__title">Velocidade × Tempo</h3></div>
+          <canvas id="chart-velocity" width="600" height="200"></canvas>
+        </article>
+        <article class="chart-panel">
+          <div class="chart-panel__header"><h3 class="chart-panel__title">Força × Tempo</h3></div>
+          <canvas id="chart-force" width="600" height="200"></canvas>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       MODULE: CHART RENDERER (Puro Canvas)
+       ════════════════════════════════════════════ -->
+  <script>
+    const ChartRenderer = (() => {
+      'use strict';
+      let cV, ctxV, cF, ctxF;
+      let data = [];
+      let maxT = 0, maxV = 0, maxF = 0;
+      const pad = { top: 35, right: 20, bottom: 45, left: 60 };
+
+      function init(vEl, fEl) {
+        cV = vEl; ctxV = vEl.getContext('2d');
+        cF = fEl; ctxF = fEl.getContext('2d');
+        _drawPlaceholder(ctxV, cV, 'Aguardando simulação...');
+        _drawPlaceholder(ctxF, cF, 'Aguardando simulação...');
+      }
+
+      function setData(results) {
+        data = results;
+        if (!data.length) return;
+        maxT = data[data.length - 1].time;
+        maxV = Math.max(10, ...data.map(r => r.velocity * 3.6));
+        maxF = Math.max(50, ...data.map(r => Math.max(r.tractionForce, Math.abs(r.resistanceTotal), Math.abs(r.brakeForce))));
+        update(0);
+      }
+
+      function update(idx) {
+        if (!data.length) return;
+        const i = Math.max(0, Math.min(Math.floor(idx), data.length - 1));
+        const current = data[i];
+        drawVelocity(i, current);
+        drawForce(i, current);
+      }
+
+      function drawVelocity(i, current) {
+        _clear(ctxV, cV);
+        _drawGrid(ctxV, cV, maxT, maxV, 's', 'km/h');
+        _drawAxisLabels(ctxV, cV, maxT, maxV, 'Tempo (s)', 'Velocidade (km/h)');
+        
+        const fullPath = data.map(d => ({ x: _mapX(d.time), y: _mapY(d.velocity * 3.6) }));
+        const progPath = fullPath.slice(0, i + 1);
+
+        // Linha completa tracejada
+        ctxV.setLineDash([5, 3]);
+        ctxV.strokeStyle = '#4a5568';
+        ctxV.lineWidth = 1.5;
+        ctxV.beginPath();
+        fullPath.forEach((p, k) => k === 0 ? ctxV.moveTo(p.x, p.y) : ctxV.lineTo(p.x, p.y));
+        ctxV.stroke();
+        ctxV.setLineDash([]);
+
+        // Linha progresso sólida
+        ctxV.strokeStyle = '#58a6ff';
+        ctxV.lineWidth = 2.5;
+        ctxV.beginPath();
+        progPath.forEach((p, k) => k === 0 ? ctxV.moveTo(p.x, p.y) : ctxV.lineTo(p.x, p.y));
+        ctxV.stroke();
+
+        // Ponto atual
+        const last = progPath[progPath.length - 1];
+        ctxV.fillStyle = '#58a6ff';
+        ctxV.beginPath(); ctxV.arc(last.x, last.y, 4, 0, Math.PI * 2); ctxV.fill();
+        ctxV.fillStyle = '#0d1117';
+        ctxV.beginPath(); ctxV.arc(last.x, last.y, 2, 0, Math.PI * 2); ctxV.fill();
+
+        // Tooltip simples
+        ctxV.fillStyle = '#e6edf3';
+        ctxV.font = '12px "SF Mono", monospace';
+        ctxV.fillText(`${(current.velocity * 3.6).toFixed(1)} km/h`, last.x + 10, last.y - 10);
+      }
+
+      function drawForce(i, current) {
+        _clear(ctxF, cF);
+        _drawGrid(ctxF, cF, maxT, maxF, 's', 'kN');
+        _drawAxisLabels(ctxF, cF, maxT, maxF, 'Tempo (s)', 'Força (kN)');
+
+        const trajPath = data.map(d => ({ x: _mapX(d.time), yF: _mapYF(d.tractionForce), yR: _mapYF(d.resistanceTotal), yB: _mapYF(d.brakeForce) }));
+        const progPath = trajPath.slice(0, i + 1);
+
+        // Linha de tração (verde)
+        ctxF.strokeStyle = '#3fb950'; ctxF.lineWidth = 2;
+        ctxF.beginPath();
+        progPath.forEach((p, k) => k === 0 ? ctxF.moveTo(p.x, p.yF) : ctxF.lineTo(p.x, p.yF));
+        ctxF.stroke();
+
+        // Linha de resistência (vermelha tracejada)
+        ctxF.strokeStyle = '#d94f4f'; ctxF.lineWidth = 1.5; ctxF.setLineDash([4, 2]);
+        ctxF.beginPath();
+        progPath.forEach((p, k) => k === 0 ? ctxF.moveTo(p.x, p.yR) : ctxF.lineTo(p.x, p.yR));
+        ctxF.stroke();
+        ctxF.setLineDash([]);
+
+        // Legenda inline
+        const lx = pad.left + 10, ly = pad.top + 20;
+        _drawLegendItem(ctxF, lx, ly, '#3fb950', 'Tração');
+        _drawLegendItem(ctxF, lx + 80, ly, '#d94f4f', 'Resistência');
+
+        // Valores atuais
+        ctxF.fillStyle = '#8b949e'; ctxF.font = '11px monospace';
+        ctxF.fillText(`F_trac: ${current.tractionForce.toFixed(1)} kN`, cF.width - 140, pad.top + 25);
+        ctxF.fillText(`R_tot:  ${current.resistanceTotal.toFixed(1)} kN`, cF.width - 140, pad.top + 40);
+      }
+
+      // ── Helpers Gráficos ──────────────────────────
+      function _mapX(t) { return pad.left + (t / maxT) * (cV.width - pad.left - pad.right); }
+      function _mapY(v) { return cV.height - pad.bottom - (v / maxV) * (cV.height - pad.top - pad.bottom); }
+      function _mapYF(f) { return cF.height - pad.bottom - (f / maxF) * (cF.height - pad.top - pad.bottom); }
+
+      function _clear(ctx, cvs) { ctx.clearRect(0, 0, cvs.width, cvs.height); }
+      function _drawPlaceholder(ctx, cvs, msg) {
+        ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, cvs.width, cvs.height);
+        ctx.fillStyle = '#555d68'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(msg, cvs.width / 2, cvs.height / 2); ctx.textAlign = 'left';
+      }
+
+      function _drawGrid(ctx, cvs, maxX, maxY, uX, uY) {
+        const gridX = 10, gridY = 5;
+        const xStep = Math.ceil(maxX / gridX), yStep = Math.ceil(maxY / gridY);
+        
+        ctx.strokeStyle = 'rgba(48, 54, 61, 0.5)'; ctx.lineWidth = 1;
+        ctx.setLineDash([2, 2]);
+        
+        for (let x = 0; x <= maxX; x += xStep) {
+          const px = _mapX(x);
+          ctx.beginPath(); ctx.moveTo(px, pad.top); ctx.lineTo(px, cvs.height - pad.bottom); ctx.stroke();
+          ctx.fillStyle = '#555d68'; ctx.font = '10px monospace'; ctx.textAlign = 'center';
+          ctx.fillText(`${x} ${uX}`, px, cvs.height - pad.bottom + 15);
+        }
+        for (let y = 0; y <= maxY; y += yStep) {
+          const py = _mapY(y);
+          ctx.beginPath(); ctx.moveTo(pad.left, py); ctx.lineTo(cvs.width - pad.right, py); ctx.stroke();
+          ctx.textAlign = 'right'; ctx.fillText(`${y}`, pad.left - 8, py + 4);
+        }
+        ctx.setLineDash([]);
+      }
+
+      function _drawAxisLabels(ctx, cvs, _, __, xLbl, yLbl) {
+        ctx.fillStyle = '#8b949e'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(xLbl, cvs.width / 2, cvs.height - 5);
+        ctx.save();
+        ctx.translate(15, cvs.height / 2); ctx.rotate(-Math.PI / 2);
+        ctx.fillText(yLbl, 0, 0);
+        ctx.restore(); ctx.textAlign = 'left';
+      }
+
+      function _drawLegendItem(ctx, x, y, color, text) {
+        ctx.fillStyle = color; ctx.fillRect(x, y - 6, 12, 12);
+        ctx.fillStyle = '#8b949e'; ctx.font = '11px sans-serif'; ctx.fillText(text, x + 16, y + 3);
+      }
+
+      return { init, setData, update };
+    })();
+  </script>
+
+  <!-- ════════════════════════════════════════════
+       MODULE: PHYSICS ENGINE
+       ════════════════════════════════════════════ -->
+  <script>
+    const PhysicsEngine = (() => {
+      'use strict';
+      const DEFAULTS = { totalMass: 500, locoPower: 3000, maxTraction: 250, gradient: 0, davisA: 1.5, davisB: 0.01, davisC: 0.0003, dt: 0.5 };
+      const G = 9.81, ROTATING_FACTOR = 1.05, EPSILON = 1e-6;
+      let config = null, state = null, history = [];
+      function reset() { state = null; history = []; }
+      function init(cfg) {
+        config = { ...DEFAULTS, ...cfg };
+        const massKg = config.totalMass * 1000;
+        state = Object.freeze({ time: 0, velocity: 0, position: 0, acceleration: 0, tractionForce: 0, resistanceTotal: 0, resistanceDavis: 0, resistanceRamp: 0, brakeForce: 0, weight: massKg * G / 1000, mass: massKg, effectiveMass: massKg * ROTATING_FACTOR });
+        history = []; _record();
+      }
+      function step(externalTractionKw) {
+        if (!state) throw new Error('PhysicsEngine.step(): init() necessário.');
+        const dt = config.dt, vKmh = state.velocity * 3.6;
+        const rRamp = state.weight * (config.gradient / 1000);
+        const rDavis = state.weight * (config.davisA + config.davisB * vKmh + config.davisC * vKmh * vKmh) / 1000;
+        const rTotal = rDavis + rRamp;
+        let fTrac;
+        if (externalTractionKw !== undefined) { fTrac = externalTractionKw; }
+        else { fTrac = state.velocity < EPSILON ? config.maxTraction : Math.min(config.maxTraction, config.locoPower / state.velocity); }
+        const accel = (fTrac - rTotal) * 1000 / state.effectiveMass;
+        state = Object.freeze({ time: state.time + dt, velocity: Math.max(0, state.velocity + accel * dt), position: state.position + Math.max(0, state.velocity + accel * dt) * dt, acceleration: accel, tractionForce: fTrac, resistanceTotal: rTotal, resistanceDavis: rDavis, resistanceRamp: rRamp, brakeForce: (externalTractionKw !== undefined && externalTractionKw < 0) ? externalTractionKw : 0, weight: state.weight, mass: state.mass, effectiveMass: state.effectiveMass });
+        _record(); return { ...state };
+      }
+      function runTo(timeLimit, tractionResolver) {
+        if (!state) throw new Error('runTo(): init() necessário.');
+        const maxIter = Math.ceil((timeLimit - state.time) / config.dt) + 2000;
+        for (let i = 0; i < maxIter; i++) {
+          const traction = typeof tractionResolver === 'function' ? tractionResolver(state) : undefined;
+          step(traction); if (state.time >= timeLimit) break;
+        }
+        return [...history];
+      }
+      function getState() { return state ? { ...state } : null; }
+      function getHistory() { return [...history]; }
+      function getConfig() { return config ? { ...config } : null; }
+      function _record() { history.push({ ...state }); }
+      return { init, step, runTo, getState, getHistory, getConfig, reset };
+    })();
+  </script>
+
+  <!-- ════════════════════════════════════════════
+       MODULE: SIMULATION CONTROLLER
+       ════════════════════════════════════════════ -->
+  <script>
+    const SimulationController = (() => {
+      'use strict';
+      const results = [], BRAKE_DECEL = 0.5, CRUISE_TOLERANCE = 0.5;
+      let isRunning = false, currentPhase = 'idle';
+      function readFormConfig() {
+        return { totalMass: Number(document.getElementById('total-mass').value) || 500, locoPower: Number(document.getElementById('loco-power').value) || 3000, maxTraction: Number(document.getElementById('max-traction').value) || 250, gradient: Number(document.getElementById('gradient').value) || 0, trackLength: Number(document.getElementById('track-length').value) || 10, maxSpeed: Number(document.getElementById('max-speed').value) || 90, targetSpeed: Number(document.getElementById('target-speed').value) || 80 };
+      }
+      function tractionResolver(st, cfg) {
+        const vAlvo = cfg.targetSpeed / 3.6;
+        const distRestante = (cfg.trackLength * 1000) - st.position;
+        const distFrenagem = st.velocity > 0 ? (st.velocity * st.velocity) / (2 * BRAKE_DECEL) : 0;
+        if (st.velocity < vAlvo - CRUISE_TOLERANCE && currentPhase !== 'braking') { currentPhase = 'acceleration'; return cfg.maxTraction; }
+        if (distRestante <= distFrenagem * 1.1 && st.velocity > 0.1) { currentPhase = 'braking'; return Math.min(0, -st.effectiveMass * BRAKE_DECEL / 1000 + st.resistanceTotal); }
+        if (st.velocity >= vAlvo - CRUISE_TOLERANCE && currentPhase !== 'braking') {
+          currentPhase = 'cruise';
+          if (Math.abs(vAlvo - st.velocity) < CRUISE_TOLERANCE) return st.resistanceTotal;
+          return Math.max(0, Math.min(cfg.maxTraction, st.resistanceTotal + 50 * (vAlvo - st.velocity)));
+        }
+        if (distRestante <= 0) { currentPhase = 'finished'; return 0; }
+        return undefined;
+      }
+      function simulate() {
+        if (isRunning) return;
+        const cfg = readFormConfig();
+        if (cfg.targetSpeed > cfg.maxSpeed) { alert(`Velocidade alvo (${cfg.targetSpeed} km/h) não pode exceder a máxima (${cfg.maxSpeed} km/h).`); return; }
+        if (cfg.targetSpeed <= 0) { alert('Velocidade alvo deve ser positiva.'); return; }
+        isRunning = true; results.length = 0; currentPhase = 'acceleration';
+        PhysicsEngine.reset();
+        PhysicsEngine.init({ totalMass: cfg.totalMass, locoPower: cfg.locoPower, maxTraction: cfg.maxTraction, gradient: cfg.gradient });
+        const vAlvo = cfg.targetSpeed / 3.6;
+        const tAcel = vAlvo / 0.5, distAcel = 0.5 * 0.5 * tAcel * tAcel;
+        const distFrenagemEst = (vAlvo * vAlvo) / (2 * BRAKE_DECEL);
+        const distCruzeiro = Math.max(0, cfg.trackLength * 1000 - distAcel - distFrenagemEst);
+        const tCruzeiro = distCruzeiro / vAlvo, tFrenagem = vAlvo / BRAKE_DECEL;
+        const tMax = Math.ceil((tAcel + tCruzeiro + tFrenagem) * 1.5 + 60);
+        PhysicsEngine.runTo(tMax, (st) => tractionResolver(st, cfg));
+        PhysicsEngine.getHistory().forEach(h => results.push({ time: h.time, velocity: h.velocity, position: h.position, acceleration: h.acceleration, tractionForce: h.tractionForce, resistanceTotal: h.resistanceTotal, brakeForce: h.brakeForce, phase: currentPhase }));
+        isRunning = false; updateStatus(results[results.length - 1] || {});
+        return results;
+      }
+      function reset() { PhysicsEngine.reset(); results.length = 0; currentPhase = 'idle'; isRunning = false; updateStatus(null); }
+      function updateStatus(st) {
+        const panel = document.getElementById('sim-status');
+        if (!st) { panel.classList.remove('visible'); return; }
+        panel.classList.add('visible');
+        document.getElementById('status-phase').textContent = currentPhase;
+        document.getElementById('status-time').textContent = st.time.toFixed(1) + ' s';
+        document.getElementById('status-speed').textContent = (st.velocity * 3.6).toFixed(1) + ' km/h';
+        document.getElementById('status-position').textContent = (st.position / 1000).toFixed(2) + ' km';
+      }
+      function getResults() { return [...results]; }
+      return { simulate, reset, getResults };
+    })();
+  </script>
+
+  <!-- ════════════════════════════════════════════
+       MODULE: CANVAS RENDERER
+       ════════════════════════════════════════════ -->
+  <script>
+    const CanvasRenderer = (() => {
+      'use strict';
+      const TIME_SCALE = 10, FPS_INTERVAL = 20, MAX_VISUAL_ANGLE = 15;
+      let canvas, ctx, animationId = null, isPlaying = false, isPaused = false;
+      let data = [], frameIndex = 0, lastFrameTime = 0, fps = 0, fpsFrames = 0, fpsLastTime = 0;
+      let trackLengthKm = 0, gradient = 0;
+
+      function init(canvasEl) {
+        canvas = canvasEl; ctx = canvas.getContext('2d');
+        canvas.addEventListener('click', togglePlay);
+      }
+
+      function setData(results, lengthKm, grad) {
+        data = results; trackLengthKm = lengthKm; gradient = grad;
+        frameIndex = 0; isPaused = false; isPlaying = true;
+        lastFrameTime = performance.now(); fpsLastTime = lastFrameTime; fpsFrames = 0;
+        _updatePlayPauseBtn();
+        _loop(lastFrameTime);
+      }
+
+      function togglePlay() {
+        if (!data.length) return;
+        if (!isPlaying) {
+          isPlaying = true; isPaused = false; lastFrameTime = performance.now(); _loop(lastFrameTime);
+        } else {
+          isPaused = !isPaused;
+          if (!isPaused) { lastFrameTime = performance.now(); _loop(lastFrameTime); }
+          else cancelAnimationFrame(animationId);
+        }
+        _updatePlayPauseBtn();
+      }
+
+      function _loop(now) {
+        if (!isPlaying || isPaused) return;
+        animationId = requestAnimationFrame(_loop);
+        const dtReal = (now - lastFrameTime) / 1000;
+        lastFrameTime = now;
+        frameIndex += (dtReal * TIME_SCALE) / 0.5;
+        if (frameIndex >= data.length - 1) { frameIndex = data.length - 1; isPlaying = false; _updatePlayPauseBtn(); }
+        
+        drawFrame(frameIndex);
+        
+        // Sync charts
+        if (window.ChartRenderer) window.ChartRenderer.update(frameIndex);
+
+        fpsFrames++;
+        if (now - fpsLastTime >= 1000) { fps = fpsFrames; fpsFrames = 0; fpsLastTime = now; document.getElementById('canvas-fps').textContent = `${fps} FPS`; }
+      }
+
+      function drawFrame(idx) {
+        if (!ctx || !canvas) return;
+        const i = Math.max(0, Math.min(Math.floor(idx), data.length - 1));
+        const frame = data[i];
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+        _drawBackground(W, H);
+        _drawTrack(W, H);
+        _drawTrain(W, H, frame);
+        _drawOverlay(W, frame);
+        _drawProgressBar(W, H, idx);
+      }
+
+      function _drawBackground(W, H) {
+        const grd = ctx.createLinearGradient(0, 0, 0, H);
+        grd.addColorStop(0, '#0f1923'); grd.addColorStop(1, '#0d1117');
+        ctx.fillStyle = grd; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = 'rgba(255,255,255,0.03)';
+        for (let i = 0; i < 40; i++) ctx.fillRect((i * 137.508) % W, (i * 73.1) % (H * 0.4), 1, 1);
+      }
+
+      function _drawTrack(W, H) {
+        const trackY = H * 0.65, trackH = 16, sleeperSpacing = 24;
+        const angleRad = Math.max(-MAX_VISUAL_ANGLE, Math.min(MAX_VISUAL_ANGLE, gradient * (MAX_VISUAL_ANGLE / 30))) * Math.PI / 180;
+        ctx.save();
+        ctx.beginPath(); ctx.moveTo(0, trackY + trackH/2); ctx.lineTo(W, trackY + trackH/2 + Math.tan(angleRad)*W); ctx.lineTo(W, trackY + trackH*1.5 + Math.tan(angleRad)*W); ctx.lineTo(0, trackY - trackH/2 + trackH); ctx.closePath(); ctx.fillStyle = '#1e2633'; ctx.fill();
+        ctx.strokeStyle = '#2a3340'; ctx.lineWidth = 2;
+        const offset = (frameIndex / 0.5) * 12;
+        for (let x = -sleeperSpacing; x < W + sleeperSpacing; x += sleeperSpacing) {
+          const px = ((x + offset) % sleeperSpacing - offset % sleeperSpacing + sleeperSpacing) % (W + 2*sleeperSpacing) - sleeperSpacing;
+          const yo = Math.tan(angleRad) * px;
+          ctx.beginPath(); ctx.moveTo(px, trackY - trackH - 4 + yo); ctx.lineTo(px, trackY + trackH * 1.5 + yo); ctx.stroke();
+        }
+        ctx.strokeStyle = '#4a5568'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(0, trackY - 2); ctx.lineTo(W, trackY - 2 + Math.tan(angleRad)*W); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, trackY + 6); ctx.lineTo(W, trackY + 6 + Math.tan(angleRad)*W); ctx.stroke();
+        ctx.restore();
+      }
+
+      function _drawTrain(W, H, frame) {
+        const trackY = H * 0.65;
+        const angleRad = Math.max(-MAX_VISUAL_ANGLE, Math.min(MAX_VISUAL_ANGLE, gradient * (MAX_VISUAL_ANGLE / 30))) * Math.PI / 180;
+        const trainX = W * 0.25, yOffset = Math.tan(angleRad) * trainX, ty = trackY + yOffset;
+        const totalMass = PhysicsEngine.getConfig()?.totalMass || 500;
+        const locoLength = Math.min(120, Math.max(60, 40 + (totalMass / 500) * 80));
+        const locoHeight = Math.min(50, Math.max(30, 20 + (totalMass / 500) * 30));
+        const trainY = ty - locoHeight;
+
+        ctx.save(); ctx.translate(0, yOffset); ctx.translate(trainX, trackY - yOffset); ctx.rotate(angleRad); ctx.translate(-trainX, -(trackY - yOffset));
+        ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(trainX - locoLength/2 + 3, trainY + locoHeight + 2, locoLength, locoHeight * 0.15);
+        
+        const locoGrd = ctx.createLinearGradient(0, trainY, 0, trainY + locoHeight);
+        locoGrd.addColorStop(0, '#2d3748'); locoGrd.addColorStop(1, '#0f1720');
+        ctx.fillStyle = locoGrd;
+        const r = 4, lx = trainX - locoLength/2, ly = trainY;
+        ctx.beginPath(); ctx.moveTo(lx+r, ly); ctx.lineTo(lx+locoLength-r, ly); ctx.quadraticCurveTo(lx+locoLength, ly, lx+locoLength, ly+r); ctx.lineTo(lx+locoLength, ly+locoHeight-r); ctx.quadraticCurveTo(lx+locoLength, ly+locoHeight, lx+locoLength-r, ly+locoHeight); ctx.lineTo(lx+r, ly+locoHeight); ctx.quadraticCurveTo(lx, ly+locoHeight, lx, ly+locoHeight-r); ctx.lineTo(lx, ly+r); ctx.quadraticCurveTo(lx, ly, lx+r, ly); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = '#4a5568'; ctx.lineWidth = 1; ctx.stroke();
+
+        ctx.fillStyle = '#3d4a5c';
+        const cabW = locoLength*0.25, cabH = locoHeight*0.7, cabX = lx+locoLength-cabW, cabY = ly+locoHeight-cabH;
+        ctx.fillRect(cabX, cabY, cabW, cabH); ctx.strokeStyle = '#5a6578'; ctx.strokeRect(cabX, cabY, cabW, cabH);
+        ctx.fillStyle = 'rgba(96,165,250,0.3)'; ctx.fillRect(cabX+4, cabY+4, cabW-8, cabH-8);
+
+        ctx.fillStyle = frame.velocity > 0.1 ? '#f0b232' : '#555d68'; ctx.shadowColor = '#f0b232'; ctx.shadowBlur = frame.velocity > 0.1 ? 8 : 0;
+        ctx.beginPath(); ctx.arc(lx+locoLength+2, ly+locoHeight*0.3, 3, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
+
+        ctx.fillStyle = '#3a4455'; const wheelR = Math.min(8, locoHeight*0.2); const wy = ly+locoHeight+wheelR*0.3;
+        for (let w=0; w<4; w++) { ctx.beginPath(); ctx.arc(lx + (locoLength/4)*(w+0.5), wy, wheelR, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle='#5a6578'; ctx.lineWidth=1; ctx.stroke(); }
+
+        let phaseColor = '#555d68';
+        if (frame.phase === 'acceleration') phaseColor = '#f0b232';
+        else if (frame.phase === 'cruise') phaseColor = '#3fb950';
+        else if (frame.phase === 'braking') phaseColor = '#d94f4f';
+        ctx.fillStyle = phaseColor; ctx.fillRect(lx+2, ly+locoHeight-3, locoLength-4, 3);
+        ctx.restore();
+      }
+
+      function _drawOverlay(W, frame) {
+        const pad = 16, bx = W-260, by = 12, bw = 248, bh = 100;
+        ctx.fillStyle = 'rgba(13,17,23,0.85)'; ctx.strokeStyle = 'rgba(48,54,61,0.8)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(bx+8,by); ctx.lineTo(bx+bw-8,by); ctx.quadraticCurveTo(bx+bw,by,bx+bw,by+8); ctx.lineTo(bx+bw,by+bh-8); ctx.quadraticCurveTo(bx+bw,by+bh,bx+bw-8,by+bh); ctx.lineTo(bx+8,by+bh); ctx.quadraticCurveTo(bx,by+bh,bx,by+bh-8); ctx.lineTo(bx,by+8); ctx.quadraticCurveTo(bx,by,bx+8,by); ctx.closePath(); ctx.fill(); ctx.stroke();
+        
+        let phL='—', phC='#555d68';
+        if (frame.phase === 'acceleration') { phL='⬆ Aceleração'; phC='#f0b232'; }
+        else if (frame.phase === 'cruise') { phL='═ Cruzeiro'; phC='#3fb950'; }
+        else if (frame.phase === 'braking') { phL='⬇ Frenagem'; phC='#d94f4f'; }
+        else if (frame.phase === 'finished') { phL='✓ Finalizado'; phC='#8b949e'; }
+        ctx.fillStyle = phC; ctx.font = 'bold 13px monospace'; ctx.fillText(phL, bx+pad, by+22);
+        ctx.fillStyle = '#e6edf3'; ctx.font = '12px monospace';
+        [`Vel: ${(frame.velocity*3.6).toFixed(1)} km/h`, `Pos: ${(frame.position/1000).toFixed(3)} km`, `T: ${frame.time.toFixed(1)} s`].forEach((l,i) => { ctx.fillStyle='#8b949e'; ctx.fillText(l, bx+pad, by+44+i*18); });
+      }
+
+      function _drawProgressBar(W, H, idx) {
+        const by = H-6, bh = 6, prog = data.length>1 ? idx/(data.length-1) : 0;
+        ctx.fillStyle = 'rgba(48,54,61,0.5)'; ctx.fillRect(0, by, W, bh);
+        ctx.fillStyle = 'rgba(240,178,50,0.6)'; ctx.fillRect(0, by, W*prog, bh);
+        ctx.fillStyle = '#f0b232'; ctx.beginPath(); ctx.arc(W * (frameIndex*0.5)/(trackLengthKm*1000), by+bh/2, 4, 0, Math.PI*2); ctx.fill();
+      }
+
+      function _updatePlayPauseBtn() {
+        const btn = document.getElementById('btn-play-pause'); if (!btn) return;
+        btn.textContent = isPlaying && !isPaused ? '⏸ Pause' : '▶ Play'; btn.disabled = !data.length;
+      }
+
+      function stop() { isPlaying = false; isPaused = false; cancelAnimationFrame(animationId); _updatePlayPauseBtn(); }
+      function drawIdle() {
+        if (!ctx || !canvas) return; const W=canvas.width, H=canvas.height; ctx.clearRect(0,0,W,H);
+        const grd = ctx.createLinearGradient(0,0,0,H); grd.addColorStop(0,'#0f1923'); grd.addColorStop(1,'#0d1117'); ctx.fillStyle=grd; ctx.fillRect(0,0,W,H);
+        const ty=H*0.65; ctx.strokeStyle='#3a4455'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(0,ty-2); ctx.lineTo(W,ty-2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0,ty+6); ctx.lineTo(W,ty+6); ctx.stroke();
+        ctx.fillStyle='#555d68'; ctx.font='14px sans-serif'; ctx.textAlign='center'; ctx.fillText('Execute uma simulação para visualizar', W/2, H/2-10); ctx.textAlign='left';
+      }
+
+      return { init, setData, togglePlay, stop, drawIdle };
+    })();
+  </script>
+
+  <!-- ════════════════════════════════════════════
+       BOOTSTRAP
+       ════════════════════════════════════════════ -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const cTrain = document.getElementById('train-canvas');
+      const cV = document.getElementById('chart-velocity');
+      const cF = document.getElementById('chart-force');
+      
+      CanvasRenderer.init(cTrain);
+      ChartRenderer.init(cV, cF);
+      CanvasRenderer.drawIdle();
+
+      document.getElementById('btn-simulate').addEventListener('click', function() {
+        this.disabled = true; this.textContent = '⏳ Simulando...';
+        requestAnimationFrame(() => {
+          const res = SimulationController.simulate();
+          const grad = Number(document.getElementById('gradient').value) || 0;
+          const len = Number(document.getElementById('track-length').value) || 10;
+          
+          CanvasRenderer.setData(res, len, grad);
+          ChartRenderer.setData(res);
+          
+          this.disabled = false; this.textContent = '▶ Simular';
+          document.getElementById('btn-play-pause').disabled = false;
+          document.getElementById('btn-play-pause').textContent = '⏸ Pause';
+        });
+      });
+
+      document.getElementById('btn-reset').addEventListener('click', () => {
+        SimulationController.reset();
+        CanvasRenderer.stop(); CanvasRenderer.drawIdle();
+        ChartRenderer.setData([]); // Limpa gráficos
+        document.getElementById('btn-play-pause').disabled = true;
+        document.getElementById('btn-play-pause').textContent = '▶ Play';
+      });
+
+      document.getElementById('btn-play-pause').addEventListener('click', () => CanvasRenderer.togglePlay());
+    });
+  </script>
+</body>
+</html>
