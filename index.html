@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Simulador de Dinâmica Longitudinal Ferroviária</title>
   <style>
+    /* ════════════════════════════════════════════
+       RESET & VARIÁVEIS GLOBAIS
+       ════════════════════════════════════════════ */
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     html { font-size: 16px; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
     body {
@@ -28,13 +31,23 @@
       --radius-sm: 6px; --radius-md: 10px; --radius-lg: 16px;
       --shadow-card: 0 4px 24px rgba(0,0,0,0.4);
       --shadow-glow: 0 0 12px rgba(240,178,50,0.15);
-      --panel-width: 300px; --header-height: 56px;
+      --panel-width: 320px; --header-height: 56px;
     }
+
+    /* ════════════════════════════════════════════
+       LAYOUT PRINCIPAL
+       ════════════════════════════════════════════ */
     .app-container {
-      display: grid; grid-template-columns: var(--panel-width) 1fr;
+      display: grid; 
+      grid-template-columns: var(--panel-width) 1fr;
       grid-template-rows: var(--header-height) 1fr;
-      grid-template-areas: "header header" "panel viewport"; min-height: 100vh;
+      grid-template-areas: "header header" "panel viewport";
+      min-height: 100vh;
     }
+
+    /* ════════════════════════════════════════════
+       HEADER
+       ════════════════════════════════════════════ */
     .app-header {
       grid-area: header; display: flex; align-items: center; gap: var(--spacing-md);
       padding: 0 var(--spacing-lg); background: var(--bg-secondary);
@@ -54,6 +67,10 @@
       padding: var(--spacing-xs) var(--spacing-sm);
       border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); color: var(--text-muted);
     }
+
+    /* ════════════════════════════════════════════
+       PAINEL DE CONFIGURAÇÃO
+       ════════════════════════════════════════════ */
     .config-panel {
       grid-area: panel; background: var(--gradient-panel);
       border-right: 1px solid var(--border-subtle); padding: var(--spacing-lg);
@@ -84,6 +101,10 @@
     }
     .field__input:focus { border-color: var(--accent-yellow); box-shadow: var(--shadow-glow); }
     .field__input::placeholder { color: var(--text-muted); }
+
+    /* ════════════════════════════════════════════
+       BOTÕES
+       ════════════════════════════════════════════ */
     .btn {
       font-family: var(--font-mono); font-size: 0.8rem; font-weight: 600;
       padding: var(--spacing-sm) var(--spacing-md); border: none;
@@ -102,10 +123,18 @@
       display: flex; gap: var(--spacing-sm); margin-top: auto;
       padding-top: var(--spacing-lg); border-top: 1px solid var(--border-subtle);
     }
+
+    /* ════════════════════════════════════════════
+       VIEWPORT PRINCIPAL
+       ════════════════════════════════════════════ */
     .viewport {
       grid-area: viewport; display: flex; flex-direction: column;
       gap: var(--spacing-md); padding: var(--spacing-md); overflow-y: auto;
     }
+
+    /* ════════════════════════════════════════════
+       CANVAS DO TREM
+       ════════════════════════════════════════════ */
     .train-canvas-section {
       background: var(--bg-card); border: 1px solid var(--border-subtle);
       border-radius: var(--radius-md); box-shadow: var(--shadow-card); overflow: hidden;
@@ -129,6 +158,10 @@
       display: block; width: 100%; height: 320px; cursor: pointer;
       background: radial-gradient(ellipse at 50% 120%, #1a2235 0%, var(--bg-primary) 70%);
     }
+
+    /* ════════════════════════════════════════════
+       GRÁFICOS
+       ════════════════════════════════════════════ */
     .charts-section { display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md); }
     .chart-panel {
       background: var(--bg-card); border: 1px solid var(--border-subtle);
@@ -145,6 +178,46 @@
       text-transform: uppercase; letter-spacing: 0.04em;
     }
     .chart-panel canvas { display: block; width: 100%; height: 200px; background: var(--bg-primary); }
+
+    /* ════════════════════════════════════════════
+       PAINEL DE RESULTADOS
+       ════════════════════════════════════════════ */
+    .results-panel {
+      background: var(--bg-card); border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md); box-shadow: var(--shadow-card);
+      padding: var(--spacing-md); display: none;
+    }
+    .results-panel.visible { display: block; }
+    .results-panel__title {
+      font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);
+      text-transform: uppercase; letter-spacing: 0.04em;
+      margin-bottom: var(--spacing-md); padding-bottom: var(--spacing-sm);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .results-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: var(--spacing-md);
+    }
+    .result-item {
+      background: var(--bg-primary); border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm); padding: var(--spacing-md);
+    }
+    .result-item__label {
+      font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: 0.05em; margin-bottom: var(--spacing-xs);
+    }
+    .result-item__value {
+      font-family: var(--font-mono); font-size: 1.25rem; font-weight: 600;
+      color: var(--accent-yellow);
+    }
+    .result-item__unit {
+      font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-secondary);
+      margin-left: 4px;
+    }
+
+    /* ════════════════════════════════════════════
+       STATUS DA SIMULAÇÃO
+       ════════════════════════════════════════════ */
     .sim-status {
       margin-top: var(--spacing-md); padding: var(--spacing-md);
       background: var(--bg-primary); border: 1px solid var(--border-subtle);
@@ -156,6 +229,21 @@
     .sim-status__row:last-child { border-bottom: none; }
     .sim-status__label { color: var(--text-muted); }
     .sim-status__value { color: var(--accent-yellow); }
+
+    /* ════════════════════════════════════════════
+       RESPONSIVIDADE (1280px+)
+       ════════════════════════════════════════════ */
+    @media (min-width: 1280px) {
+      .app-container {
+        grid-template-columns: 340px 1fr;
+      }
+      .config-panel { padding: var(--spacing-xl); }
+      .viewport { padding: var(--spacing-lg); }
+      .train-canvas-section canvas { height: 360px; }
+      .chart-panel canvas { height: 220px; }
+      .results-grid { grid-template-columns: repeat(5, 1fr); }
+    }
+
     @media (max-width: 900px) {
       .app-container {
         grid-template-columns: 1fr; grid-template-rows: var(--header-height) auto 1fr;
@@ -163,7 +251,12 @@
       }
       .config-panel { border-right: none; border-bottom: 1px solid var(--border-subtle); max-height: 300px; }
       .charts-section { grid-template-columns: 1fr; }
+      .results-grid { grid-template-columns: repeat(2, 1fr); }
     }
+
+    /* ════════════════════════════════════════════
+       SCROLLBAR CUSTOMIZADA
+       ════════════════════════════════════════════ */
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 3px; }
@@ -172,34 +265,72 @@
 </head>
 <body>
   <div class="app-container">
+    <!-- HEADER -->
     <header class="app-header">
       <div class="app-header__icon" aria-hidden="true">🚂</div>
       <h1 class="app-header__title"><span>LongDynamics</span> — Simulador Ferroviário</h1>
-      <span class="app-header__badge" id="version-badge">v0.5.0 · charts</span>
+      <span class="app-header__badge" id="version-badge">v1.0.0 · final</span>
     </header>
 
+    <!-- PAINEL DE CONFIGURAÇÃO -->
     <aside class="config-panel" aria-label="Painel de Configuração">
       <p class="config-panel__title">Parâmetros da Simulação</p>
+      
+      <!-- Grupo: Trem -->
       <div class="param-group">
         <h2 class="param-group__label">Trem</h2>
-        <div class="field"><label class="field__label" for="total-mass">Peso Total (t)</label><input class="field__input" type="number" id="total-mass" value="500" min="10" step="10"></div>
-        <div class="field"><label class="field__label" for="loco-power">Potência da Locomotiva (kW)</label><input class="field__input" type="number" id="loco-power" value="3000" min="100" step="50"></div>
-        <div class="field"><label class="field__label" for="max-traction">Esforço Máximo de Tração (kN)</label><input class="field__input" type="number" id="max-traction" value="250" min="10" step="5"></div>
+        <div class="field">
+          <label class="field__label" for="total-mass">Peso Total (t)</label>
+          <input class="field__input" type="number" id="total-mass" value="500" min="10" step="10"
+            title="Massa total da composição em toneladas. Inclui locomotiva e vagões.">
+        </div>
+        <div class="field">
+          <label class="field__label" for="loco-power">Potência da Locomotiva (kW)</label>
+          <input class="field__input" type="number" id="loco-power" value="3000" min="100" step="50"
+            title="Potência nominal do motor de tração em quilowatts.">
+        </div>
+        <div class="field">
+          <label class="field__label" for="max-traction">Esforço Máximo de Tração (kN)</label>
+          <input class="field__input" type="number" id="max-traction" value="250" min="10" step="5"
+            title="Força máxima de tração que as rodas podem transmitir aos trilhos.">
+        </div>
       </div>
+
+      <!-- Grupo: Via -->
       <div class="param-group">
         <h2 class="param-group__label">Via</h2>
-        <div class="field"><label class="field__label" for="track-length">Comprimento Total (km)</label><input class="field__input" type="number" id="track-length" value="10" min="0.1" step="0.5"></div>
-        <div class="field"><label class="field__label" for="gradient">Declividade (‰)</label><input class="field__input" type="number" id="gradient" value="0" step="0.5" min="-30" max="30"></div>
-        <div class="field"><label class="field__label" for="max-speed">Velocidade Máxima Permitida (km/h)</label><input class="field__input" type="number" id="max-speed" value="90" min="10" step="5"></div>
+        <div class="field">
+          <label class="field__label" for="track-length">Comprimento Total (km)</label>
+          <input class="field__input" type="number" id="track-length" value="10" min="0.1" step="0.5"
+            title="Distância total a ser percorrida na simulação.">
+        </div>
+        <div class="field">
+          <label class="field__label" for="gradient">Declividade (‰)</label>
+          <input class="field__input" type="number" id="gradient" value="0" step="0.5" min="-30" max="30"
+            title="Inclinação da via em partes por mil. Positivo = subida, negativo = descida.">
+        </div>
+        <div class="field">
+          <label class="field__label" for="max-speed">Velocidade Máxima Permitida (km/h)</label>
+          <input class="field__input" type="number" id="max-speed" value="90" min="10" step="5"
+            title="Limite máximo de velocidade permitido na via.">
+        </div>
       </div>
+
+      <!-- Grupo: Controle -->
       <div class="param-group">
         <h2 class="param-group__label">Controle</h2>
-        <div class="field"><label class="field__label" for="target-speed">Velocidade Alvo de Cruzeiro (km/h)</label><input class="field__input" type="number" id="target-speed" value="80" min="10" step="5"></div>
+        <div class="field">
+          <label class="field__label" for="target-speed">Velocidade Alvo de Cruzeiro (km/h)</label>
+          <input class="field__input" type="number" id="target-speed" value="80" min="10" step="5"
+            title="Velocidade desejada para regime de cruzeiro durante a simulação.">
+        </div>
         <div class="panel-actions">
           <button class="btn btn--primary" id="btn-simulate">▶ Simular</button>
           <button class="btn btn--secondary" id="btn-reset">↺ Resetar</button>
         </div>
       </div>
+
+      <!-- Status da Simulação -->
       <div class="sim-status" id="sim-status">
         <div class="sim-status__row"><span class="sim-status__label">Fase</span><span class="sim-status__value" id="status-phase">—</span></div>
         <div class="sim-status__row"><span class="sim-status__label">Tempo</span><span class="sim-status__value" id="status-time">—</span></div>
@@ -208,7 +339,9 @@
       </div>
     </aside>
 
+    <!-- VIEWPORT PRINCIPAL -->
     <main class="viewport">
+      <!-- Canvas do Trem -->
       <section class="train-canvas-section" aria-label="Animação do Trem">
         <div class="train-canvas-section__header">
           <span class="train-canvas-section__title"><span class="dot"></span> Visualização da Composição</span>
@@ -220,6 +353,7 @@
         <canvas id="train-canvas" width="1200" height="320"></canvas>
       </section>
 
+      <!-- Gráficos -->
       <section class="charts-section" aria-label="Gráficos de Resultados">
         <article class="chart-panel">
           <div class="chart-panel__header"><h3 class="chart-panel__title">Velocidade × Tempo</h3></div>
@@ -230,11 +364,38 @@
           <canvas id="chart-force" width="600" height="200"></canvas>
         </article>
       </section>
+
+      <!-- Painel de Resultados -->
+      <section class="results-panel" id="results-panel" aria-label="Resultados da Simulação">
+        <h3 class="results-panel__title">📊 Resultados da Simulação</h3>
+        <div class="results-grid">
+          <div class="result-item">
+            <div class="result-item__label">Distância Total</div>
+            <div><span class="result-item__value" id="res-distance">0.00</span><span class="result-item__unit">km</span></div>
+          </div>
+          <div class="result-item">
+            <div class="result-item__label">Tempo Total</div>
+            <div><span class="result-item__value" id="res-time">0.0</span><span class="result-item__unit">s</span></div>
+          </div>
+          <div class="result-item">
+            <div class="result-item__label">Velocidade Média</div>
+            <div><span class="result-item__value" id="res-avg-speed">0.0</span><span class="result-item__unit">km/h</span></div>
+          </div>
+          <div class="result-item">
+            <div class="result-item__label">Velocidade Máxima</div>
+            <div><span class="result-item__value" id="res-max-speed">0.0</span><span class="result-item__unit">km/h</span></div>
+          </div>
+          <div class="result-item">
+            <div class="result-item__label">Energia Consumida</div>
+            <div><span class="result-item__value" id="res-energy">0.00</span><span class="result-item__unit">kWh</span></div>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 
   <!-- ════════════════════════════════════════════
-       MODULE: CHART RENDERER (Puro Canvas)
+       MODULE: CHART RENDERER (Canvas Puro)
        ════════════════════════════════════════════ -->
   <script>
     const ChartRenderer = (() => {
@@ -252,11 +413,15 @@
       }
 
       function setData(results) {
-        data = results;
-        if (!data.length) return;
-        maxT = data[data.length - 1].time;
+        data = results || [];
+        if (!data.length) {
+          _drawPlaceholder(ctxV, cV, 'Aguardando simulação...');
+          _drawPlaceholder(ctxF, cF, 'Aguardando simulação...');
+          return;
+        }
+        maxT = Math.max(1, data[data.length - 1].time);
         maxV = Math.max(10, ...data.map(r => r.velocity * 3.6));
-        maxF = Math.max(50, ...data.map(r => Math.max(r.tractionForce, Math.abs(r.resistanceTotal), Math.abs(r.brakeForce))));
+        maxF = Math.max(50, ...data.map(r => Math.max(Math.abs(r.tractionForce || 0), Math.abs(r.resistanceTotal || 0), Math.abs(r.brakeForce || 0))));
         update(0);
       }
 
@@ -271,7 +436,7 @@
       function drawVelocity(i, current) {
         _clear(ctxV, cV);
         _drawGrid(ctxV, cV, maxT, maxV, 's', 'km/h');
-        _drawAxisLabels(ctxV, cV, maxT, maxV, 'Tempo (s)', 'Velocidade (km/h)');
+        _drawAxisLabels(ctxV, cV, 'Tempo (s)', 'Velocidade (km/h)');
         
         const fullPath = data.map(d => ({ x: _mapX(d.time), y: _mapY(d.velocity * 3.6) }));
         const progPath = fullPath.slice(0, i + 1);
@@ -294,23 +459,30 @@
 
         // Ponto atual
         const last = progPath[progPath.length - 1];
-        ctxV.fillStyle = '#58a6ff';
-        ctxV.beginPath(); ctxV.arc(last.x, last.y, 4, 0, Math.PI * 2); ctxV.fill();
-        ctxV.fillStyle = '#0d1117';
-        ctxV.beginPath(); ctxV.arc(last.x, last.y, 2, 0, Math.PI * 2); ctxV.fill();
+        if (last) {
+          ctxV.fillStyle = '#58a6ff';
+          ctxV.beginPath(); ctxV.arc(last.x, last.y, 4, 0, Math.PI * 2); ctxV.fill();
+          ctxV.fillStyle = '#0d1117';
+          ctxV.beginPath(); ctxV.arc(last.x, last.y, 2, 0, Math.PI * 2); ctxV.fill();
 
-        // Tooltip simples
-        ctxV.fillStyle = '#e6edf3';
-        ctxV.font = '12px "SF Mono", monospace';
-        ctxV.fillText(`${(current.velocity * 3.6).toFixed(1)} km/h`, last.x + 10, last.y - 10);
+          // Tooltip simples
+          ctxV.fillStyle = '#e6edf3';
+          ctxV.font = '12px "SF Mono", monospace';
+          ctxV.fillText(`${(current.velocity * 3.6).toFixed(1)} km/h`, last.x + 10, last.y - 10);
+        }
       }
 
       function drawForce(i, current) {
         _clear(ctxF, cF);
         _drawGrid(ctxF, cF, maxT, maxF, 's', 'kN');
-        _drawAxisLabels(ctxF, cF, maxT, maxF, 'Tempo (s)', 'Força (kN)');
+        _drawAxisLabels(ctxF, cF, 'Tempo (s)', 'Força (kN)');
 
-        const trajPath = data.map(d => ({ x: _mapX(d.time), yF: _mapYF(d.tractionForce), yR: _mapYF(d.resistanceTotal), yB: _mapYF(d.brakeForce) }));
+        const trajPath = data.map(d => ({ 
+          x: _mapX(d.time), 
+          yF: _mapYF(d.tractionForce || 0), 
+          yR: _mapYF(d.resistanceTotal || 0), 
+          yB: _mapYF(d.brakeForce || 0) 
+        }));
         const progPath = trajPath.slice(0, i + 1);
 
         // Linha de tração (verde)
@@ -333,8 +505,8 @@
 
         // Valores atuais
         ctxF.fillStyle = '#8b949e'; ctxF.font = '11px monospace';
-        ctxF.fillText(`F_trac: ${current.tractionForce.toFixed(1)} kN`, cF.width - 140, pad.top + 25);
-        ctxF.fillText(`R_tot:  ${current.resistanceTotal.toFixed(1)} kN`, cF.width - 140, pad.top + 40);
+        ctxF.fillText(`F_trac: ${(current.tractionForce || 0).toFixed(1)} kN`, cF.width - 140, pad.top + 25);
+        ctxF.fillText(`R_tot:  ${(current.resistanceTotal || 0).toFixed(1)} kN`, cF.width - 140, pad.top + 40);
       }
 
       // ── Helpers Gráficos ──────────────────────────
@@ -343,6 +515,7 @@
       function _mapYF(f) { return cF.height - pad.bottom - (f / maxF) * (cF.height - pad.top - pad.bottom); }
 
       function _clear(ctx, cvs) { ctx.clearRect(0, 0, cvs.width, cvs.height); }
+      
       function _drawPlaceholder(ctx, cvs, msg) {
         ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, cvs.width, cvs.height);
         ctx.fillStyle = '#555d68'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
@@ -351,7 +524,7 @@
 
       function _drawGrid(ctx, cvs, maxX, maxY, uX, uY) {
         const gridX = 10, gridY = 5;
-        const xStep = Math.ceil(maxX / gridX), yStep = Math.ceil(maxY / gridY);
+        const xStep = Math.ceil(maxX / gridX) || 1, yStep = Math.ceil(maxY / gridY) || 1;
         
         ctx.strokeStyle = 'rgba(48, 54, 61, 0.5)'; ctx.lineWidth = 1;
         ctx.setLineDash([2, 2]);
@@ -370,7 +543,7 @@
         ctx.setLineDash([]);
       }
 
-      function _drawAxisLabels(ctx, cvs, _, __, xLbl, yLbl) {
+      function _drawAxisLabels(ctx, cvs, xLbl, yLbl) {
         ctx.fillStyle = '#8b949e'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
         ctx.fillText(xLbl, cvs.width / 2, cvs.height - 5);
         ctx.save();
@@ -397,39 +570,80 @@
       const DEFAULTS = { totalMass: 500, locoPower: 3000, maxTraction: 250, gradient: 0, davisA: 1.5, davisB: 0.01, davisC: 0.0003, dt: 0.5 };
       const G = 9.81, ROTATING_FACTOR = 1.05, EPSILON = 1e-6;
       let config = null, state = null, history = [];
-      function reset() { state = null; history = []; }
+
+      function reset() { 
+        config = null; 
+        state = null; 
+        history = []; 
+      }
+
       function init(cfg) {
         config = { ...DEFAULTS, ...cfg };
         const massKg = config.totalMass * 1000;
-        state = Object.freeze({ time: 0, velocity: 0, position: 0, acceleration: 0, tractionForce: 0, resistanceTotal: 0, resistanceDavis: 0, resistanceRamp: 0, brakeForce: 0, weight: massKg * G / 1000, mass: massKg, effectiveMass: massKg * ROTATING_FACTOR });
-        history = []; _record();
+        state = Object.freeze({ 
+          time: 0, velocity: 0, position: 0, acceleration: 0, 
+          tractionForce: 0, resistanceTotal: 0, resistanceDavis: 0, 
+          resistanceRamp: 0, brakeForce: 0, 
+          weight: massKg * G / 1000, 
+          mass: massKg, 
+          effectiveMass: massKg * ROTATING_FACTOR 
+        });
+        history = []; 
+        _record();
       }
+
       function step(externalTractionKw) {
         if (!state) throw new Error('PhysicsEngine.step(): init() necessário.');
         const dt = config.dt, vKmh = state.velocity * 3.6;
         const rRamp = state.weight * (config.gradient / 1000);
         const rDavis = state.weight * (config.davisA + config.davisB * vKmh + config.davisC * vKmh * vKmh) / 1000;
         const rTotal = rDavis + rRamp;
+        
         let fTrac;
-        if (externalTractionKw !== undefined) { fTrac = externalTractionKw; }
-        else { fTrac = state.velocity < EPSILON ? config.maxTraction : Math.min(config.maxTraction, config.locoPower / state.velocity); }
+        if (externalTractionKw !== undefined) { 
+          fTrac = externalTractionKw; 
+        } else { 
+          fTrac = state.velocity < EPSILON ? config.maxTraction : Math.min(config.maxTraction, config.locoPower / state.velocity); 
+        }
+        
         const accel = (fTrac - rTotal) * 1000 / state.effectiveMass;
-        state = Object.freeze({ time: state.time + dt, velocity: Math.max(0, state.velocity + accel * dt), position: state.position + Math.max(0, state.velocity + accel * dt) * dt, acceleration: accel, tractionForce: fTrac, resistanceTotal: rTotal, resistanceDavis: rDavis, resistanceRamp: rRamp, brakeForce: (externalTractionKw !== undefined && externalTractionKw < 0) ? externalTractionKw : 0, weight: state.weight, mass: state.mass, effectiveMass: state.effectiveMass });
-        _record(); return { ...state };
+        const newVel = Math.max(0, state.velocity + accel * dt);
+        const newPos = state.position + Math.max(0, state.velocity + accel * dt) * dt;
+        
+        state = Object.freeze({ 
+          time: state.time + dt, 
+          velocity: newVel, 
+          position: newPos, 
+          acceleration: accel, 
+          tractionForce: fTrac, 
+          resistanceTotal: rTotal, 
+          resistanceDavis: rDavis, 
+          resistanceRamp: rRamp, 
+          brakeForce: (externalTractionKw !== undefined && externalTractionKw < 0) ? externalTractionKw : 0, 
+          weight: state.weight, 
+          mass: state.mass, 
+          effectiveMass: state.effectiveMass 
+        });
+        _record(); 
+        return { ...state };
       }
+
       function runTo(timeLimit, tractionResolver) {
         if (!state) throw new Error('runTo(): init() necessário.');
         const maxIter = Math.ceil((timeLimit - state.time) / config.dt) + 2000;
         for (let i = 0; i < maxIter; i++) {
           const traction = typeof tractionResolver === 'function' ? tractionResolver(state) : undefined;
-          step(traction); if (state.time >= timeLimit) break;
+          step(traction); 
+          if (state.time >= timeLimit) break;
         }
         return [...history];
       }
+
       function getState() { return state ? { ...state } : null; }
       function getHistory() { return [...history]; }
       function getConfig() { return config ? { ...config } : null; }
       function _record() { history.push({ ...state }); }
+
       return { init, step, runTo, getState, getHistory, getConfig, reset };
     })();
   </script>
@@ -440,45 +654,106 @@
   <script>
     const SimulationController = (() => {
       'use strict';
-      const results = [], BRAKE_DECEL = 0.5, CRUISE_TOLERANCE = 0.5;
+      const results = [];
+      const BRAKE_DECEL = 0.5, CRUISE_TOLERANCE = 0.5;
       let isRunning = false, currentPhase = 'idle';
+
       function readFormConfig() {
-        return { totalMass: Number(document.getElementById('total-mass').value) || 500, locoPower: Number(document.getElementById('loco-power').value) || 3000, maxTraction: Number(document.getElementById('max-traction').value) || 250, gradient: Number(document.getElementById('gradient').value) || 0, trackLength: Number(document.getElementById('track-length').value) || 10, maxSpeed: Number(document.getElementById('max-speed').value) || 90, targetSpeed: Number(document.getElementById('target-speed').value) || 80 };
+        return { 
+          totalMass: Number(document.getElementById('total-mass').value) || 500, 
+          locoPower: Number(document.getElementById('loco-power').value) || 3000, 
+          maxTraction: Number(document.getElementById('max-traction').value) || 250, 
+          gradient: Number(document.getElementById('gradient').value) || 0, 
+          trackLength: Number(document.getElementById('track-length').value) || 10, 
+          maxSpeed: Number(document.getElementById('max-speed').value) || 90, 
+          targetSpeed: Number(document.getElementById('target-speed').value) || 80 
+        };
       }
+
       function tractionResolver(st, cfg) {
         const vAlvo = cfg.targetSpeed / 3.6;
         const distRestante = (cfg.trackLength * 1000) - st.position;
         const distFrenagem = st.velocity > 0 ? (st.velocity * st.velocity) / (2 * BRAKE_DECEL) : 0;
-        if (st.velocity < vAlvo - CRUISE_TOLERANCE && currentPhase !== 'braking') { currentPhase = 'acceleration'; return cfg.maxTraction; }
-        if (distRestante <= distFrenagem * 1.1 && st.velocity > 0.1) { currentPhase = 'braking'; return Math.min(0, -st.effectiveMass * BRAKE_DECEL / 1000 + st.resistanceTotal); }
+        
+        if (st.velocity < vAlvo - CRUISE_TOLERANCE && currentPhase !== 'braking') { 
+          currentPhase = 'acceleration'; 
+          return cfg.maxTraction; 
+        }
+        if (distRestante <= distFrenagem * 1.1 && st.velocity > 0.1) { 
+          currentPhase = 'braking'; 
+          return Math.min(0, -st.effectiveMass * BRAKE_DECEL / 1000 + st.resistanceTotal); 
+        }
         if (st.velocity >= vAlvo - CRUISE_TOLERANCE && currentPhase !== 'braking') {
           currentPhase = 'cruise';
           if (Math.abs(vAlvo - st.velocity) < CRUISE_TOLERANCE) return st.resistanceTotal;
           return Math.max(0, Math.min(cfg.maxTraction, st.resistanceTotal + 50 * (vAlvo - st.velocity)));
         }
-        if (distRestante <= 0) { currentPhase = 'finished'; return 0; }
+        if (distRestante <= 0) { 
+          currentPhase = 'finished'; 
+          return 0; 
+        }
         return undefined;
       }
+
       function simulate() {
-        if (isRunning) return;
+        if (isRunning) return null;
         const cfg = readFormConfig();
-        if (cfg.targetSpeed > cfg.maxSpeed) { alert(`Velocidade alvo (${cfg.targetSpeed} km/h) não pode exceder a máxima (${cfg.maxSpeed} km/h).`); return; }
-        if (cfg.targetSpeed <= 0) { alert('Velocidade alvo deve ser positiva.'); return; }
-        isRunning = true; results.length = 0; currentPhase = 'acceleration';
+        
+        if (cfg.targetSpeed > cfg.maxSpeed) { 
+          alert(`Velocidade alvo (${cfg.targetSpeed} km/h) não pode exceder a máxima (${cfg.maxSpeed} km/h).`); 
+          return null; 
+        }
+        if (cfg.targetSpeed <= 0) { 
+          alert('Velocidade alvo deve ser positiva.'); 
+          return null; 
+        }
+        
+        isRunning = true; 
+        results.length = 0; 
+        currentPhase = 'acceleration';
+        
         PhysicsEngine.reset();
-        PhysicsEngine.init({ totalMass: cfg.totalMass, locoPower: cfg.locoPower, maxTraction: cfg.maxTraction, gradient: cfg.gradient });
+        PhysicsEngine.init({ 
+          totalMass: cfg.totalMass, 
+          locoPower: cfg.locoPower, 
+          maxTraction: cfg.maxTraction, 
+          gradient: cfg.gradient 
+        });
+        
         const vAlvo = cfg.targetSpeed / 3.6;
         const tAcel = vAlvo / 0.5, distAcel = 0.5 * 0.5 * tAcel * tAcel;
         const distFrenagemEst = (vAlvo * vAlvo) / (2 * BRAKE_DECEL);
         const distCruzeiro = Math.max(0, cfg.trackLength * 1000 - distAcel - distFrenagemEst);
         const tCruzeiro = distCruzeiro / vAlvo, tFrenagem = vAlvo / BRAKE_DECEL;
         const tMax = Math.ceil((tAcel + tCruzeiro + tFrenagem) * 1.5 + 60);
+        
         PhysicsEngine.runTo(tMax, (st) => tractionResolver(st, cfg));
-        PhysicsEngine.getHistory().forEach(h => results.push({ time: h.time, velocity: h.velocity, position: h.position, acceleration: h.acceleration, tractionForce: h.tractionForce, resistanceTotal: h.resistanceTotal, brakeForce: h.brakeForce, phase: currentPhase }));
-        isRunning = false; updateStatus(results[results.length - 1] || {});
+        
+        const hist = PhysicsEngine.getHistory();
+        hist.forEach(h => results.push({ 
+          time: h.time, 
+          velocity: h.velocity, 
+          position: h.position, 
+          acceleration: h.acceleration, 
+          tractionForce: h.tractionForce, 
+          resistanceTotal: h.resistanceTotal, 
+          brakeForce: h.brakeForce, 
+          phase: currentPhase 
+        }));
+        
+        isRunning = false; 
+        updateStatus(results[results.length - 1] || {});
         return results;
       }
-      function reset() { PhysicsEngine.reset(); results.length = 0; currentPhase = 'idle'; isRunning = false; updateStatus(null); }
+
+      function reset() { 
+        PhysicsEngine.reset(); 
+        results.length = 0; 
+        currentPhase = 'idle'; 
+        isRunning = false; 
+        updateStatus(null); 
+      }
+
       function updateStatus(st) {
         const panel = document.getElementById('sim-status');
         if (!st) { panel.classList.remove('visible'); return; }
@@ -488,8 +763,91 @@
         document.getElementById('status-speed').textContent = (st.velocity * 3.6).toFixed(1) + ' km/h';
         document.getElementById('status-position').textContent = (st.position / 1000).toFixed(2) + ' km';
       }
+
       function getResults() { return [...results]; }
-      return { simulate, reset, getResults };
+      
+      function getCurrentPhase() { return currentPhase; }
+
+      return { simulate, reset, getResults, getCurrentPhase };
+    })();
+  </script>
+
+  <!-- ════════════════════════════════════════════
+       MODULE: RESULTS CALCULATOR
+       ════════════════════════════════════════════ -->
+  <script>
+    const ResultsCalculator = (() => {
+      'use strict';
+
+      function calculate(results) {
+        if (!results || results.length < 2) {
+          return {
+            distance: 0,
+            totalTime: 0,
+            avgSpeed: 0,
+            maxSpeed: 0,
+            energy: 0
+          };
+        }
+
+        const first = results[0];
+        const last = results[results.length - 1];
+
+        // Distância total percorrida (km)
+        const distance = last.position / 1000;
+
+        // Tempo total (s)
+        const totalTime = last.time;
+
+        // Velocidade média (km/h)
+        const avgSpeed = totalTime > 0 ? (distance / totalTime) * 3600 : 0;
+
+        // Velocidade máxima atingida (km/h)
+        const maxSpeed = Math.max(...results.map(r => r.velocity * 3.6));
+
+        // Energia consumida: E = integral de F_tracao × dX (kWh)
+        // Usamos soma de Riemann: E ≈ Σ(F_tracao_i × Δx_i) / 3600000
+        // F em kN, dX em m → resultado em kJ, dividimos por 3600 para kWh
+        let energy = 0;
+        for (let i = 1; i < results.length; i++) {
+          const dx = (results[i].position - results[i - 1].position); // metros
+          const F = Math.max(0, results[i].tractionForce || 0); // kN (só tração positiva consome energia)
+          energy += F * dx; // kJ
+        }
+        energy = energy / 3600; // kWh
+
+        return { distance, totalTime, avgSpeed, maxSpeed, energy };
+      }
+
+      function display(results) {
+        const panel = document.getElementById('results-panel');
+        if (!results || results.length < 2) {
+          panel.classList.remove('visible');
+          return;
+        }
+
+        const metrics = calculate(results);
+        
+        document.getElementById('res-distance').textContent = metrics.distance.toFixed(2);
+        document.getElementById('res-time').textContent = metrics.totalTime.toFixed(1);
+        document.getElementById('res-avg-speed').textContent = metrics.avgSpeed.toFixed(1);
+        document.getElementById('res-max-speed').textContent = metrics.maxSpeed.toFixed(1);
+        document.getElementById('res-energy').textContent = metrics.energy.toFixed(2);
+        
+        panel.classList.add('visible');
+      }
+
+      function clear() {
+        const panel = document.getElementById('results-panel');
+        panel.classList.remove('visible');
+        document.getElementById('res-distance').textContent = '0.00';
+        document.getElementById('res-time').textContent = '0.0';
+        document.getElementById('res-avg-speed').textContent = '0.0';
+        document.getElementById('res-max-speed').textContent = '0.0';
+        document.getElementById('res-energy').textContent = '0.00';
+      }
+
+      return { calculate, display, clear };
     })();
   </script>
 
@@ -510,11 +868,17 @@
       }
 
       function setData(results, lengthKm, grad) {
-        data = results; trackLengthKm = lengthKm; gradient = grad;
-        frameIndex = 0; isPaused = false; isPlaying = true;
-        lastFrameTime = performance.now(); fpsLastTime = lastFrameTime; fpsFrames = 0;
+        data = results || [];
+        trackLengthKm = lengthKm; 
+        gradient = grad;
+        frameIndex = 0; 
+        isPaused = false; 
+        isPlaying = data.length > 0;
+        lastFrameTime = performance.now(); 
+        fpsLastTime = lastFrameTime; 
+        fpsFrames = 0;
         _updatePlayPauseBtn();
-        _loop(lastFrameTime);
+        if (isPlaying) _loop(lastFrameTime);
       }
 
       function togglePlay() {
@@ -535,7 +899,11 @@
         const dtReal = (now - lastFrameTime) / 1000;
         lastFrameTime = now;
         frameIndex += (dtReal * TIME_SCALE) / 0.5;
-        if (frameIndex >= data.length - 1) { frameIndex = data.length - 1; isPlaying = false; _updatePlayPauseBtn(); }
+        if (frameIndex >= data.length - 1) { 
+          frameIndex = data.length - 1; 
+          isPlaying = false; 
+          _updatePlayPauseBtn(); 
+        }
         
         drawFrame(frameIndex);
         
@@ -543,7 +911,12 @@
         if (window.ChartRenderer) window.ChartRenderer.update(frameIndex);
 
         fpsFrames++;
-        if (now - fpsLastTime >= 1000) { fps = fpsFrames; fpsFrames = 0; fpsLastTime = now; document.getElementById('canvas-fps').textContent = `${fps} FPS`; }
+        if (now - fpsLastTime >= 1000) { 
+          fps = fpsFrames; 
+          fpsFrames = 0; 
+          fpsLastTime = now; 
+          document.getElementById('canvas-fps').textContent = `${fps} FPS`; 
+        }
       }
 
       function drawFrame(idx) {
@@ -651,11 +1024,26 @@
       }
 
       function stop() { isPlaying = false; isPaused = false; cancelAnimationFrame(animationId); _updatePlayPauseBtn(); }
+      
       function drawIdle() {
-        if (!ctx || !canvas) return; const W=canvas.width, H=canvas.height; ctx.clearRect(0,0,W,H);
-        const grd = ctx.createLinearGradient(0,0,0,H); grd.addColorStop(0,'#0f1923'); grd.addColorStop(1,'#0d1117'); ctx.fillStyle=grd; ctx.fillRect(0,0,W,H);
-        const ty=H*0.65; ctx.strokeStyle='#3a4455'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(0,ty-2); ctx.lineTo(W,ty-2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0,ty+6); ctx.lineTo(W,ty+6); ctx.stroke();
-        ctx.fillStyle='#555d68'; ctx.font='14px sans-serif'; ctx.textAlign='center'; ctx.fillText('Execute uma simulação para visualizar', W/2, H/2-10); ctx.textAlign='left';
+        if (!ctx || !canvas) return; 
+        const W=canvas.width, H=canvas.height; 
+        ctx.clearRect(0,0,W,H);
+        const grd = ctx.createLinearGradient(0,0,0,H); 
+        grd.addColorStop(0,'#0f1923'); 
+        grd.addColorStop(1,'#0d1117'); 
+        ctx.fillStyle=grd; 
+        ctx.fillRect(0,0,W,H);
+        const ty=H*0.65; 
+        ctx.strokeStyle='#3a4455'; 
+        ctx.lineWidth=2; 
+        ctx.beginPath(); ctx.moveTo(0,ty-2); ctx.lineTo(W,ty-2); ctx.stroke(); 
+        ctx.beginPath(); ctx.moveTo(0,ty+6); ctx.lineTo(W,ty+6); ctx.stroke();
+        ctx.fillStyle='#555d68'; 
+        ctx.font='14px sans-serif'; 
+        ctx.textAlign='center'; 
+        ctx.fillText('Execute uma simulação para visualizar', W/2, H/2-10); 
+        ctx.textAlign='left';
       }
 
       return { init, setData, togglePlay, stop, drawIdle };
@@ -663,7 +1051,7 @@
   </script>
 
   <!-- ════════════════════════════════════════════
-       BOOTSTRAP
+       BOOTSTRAP & EVENT HANDLERS
        ════════════════════════════════════════════ -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -671,34 +1059,61 @@
       const cV = document.getElementById('chart-velocity');
       const cF = document.getElementById('chart-force');
       
+      // Inicializa renderizadores
       CanvasRenderer.init(cTrain);
       ChartRenderer.init(cV, cF);
       CanvasRenderer.drawIdle();
 
+      // Handler: Botão Simular
       document.getElementById('btn-simulate').addEventListener('click', function() {
         this.disabled = true; this.textContent = '⏳ Simulando...';
         requestAnimationFrame(() => {
           const res = SimulationController.simulate();
-          const grad = Number(document.getElementById('gradient').value) || 0;
-          const len = Number(document.getElementById('track-length').value) || 10;
-          
-          CanvasRenderer.setData(res, len, grad);
-          ChartRenderer.setData(res);
+          if (res && res.length > 0) {
+            const grad = Number(document.getElementById('gradient').value) || 0;
+            const len = Number(document.getElementById('track-length').value) || 10;
+            
+            CanvasRenderer.setData(res, len, grad);
+            ChartRenderer.setData(res);
+            ResultsCalculator.display(res);
+          }
           
           this.disabled = false; this.textContent = '▶ Simular';
-          document.getElementById('btn-play-pause').disabled = false;
+          document.getElementById('btn-play-pause').disabled = !res || res.length === 0;
           document.getElementById('btn-play-pause').textContent = '⏸ Pause';
         });
       });
 
+      // Handler: Botão Resetar
       document.getElementById('btn-reset').addEventListener('click', () => {
+        // Reset simulation state
         SimulationController.reset();
-        CanvasRenderer.stop(); CanvasRenderer.drawIdle();
-        ChartRenderer.setData([]); // Limpa gráficos
+        
+        // Stop and clear canvas
+        CanvasRenderer.stop(); 
+        CanvasRenderer.drawIdle();
+        
+        // Clear charts
+        ChartRenderer.setData([]);
+        
+        // Clear results panel
+        ResultsCalculator.clear();
+        
+        // Reset play/pause button
         document.getElementById('btn-play-pause').disabled = true;
         document.getElementById('btn-play-pause').textContent = '▶ Play';
+        
+        // Reset form inputs to defaults
+        document.getElementById('total-mass').value = '500';
+        document.getElementById('loco-power').value = '3000';
+        document.getElementById('max-traction').value = '250';
+        document.getElementById('track-length').value = '10';
+        document.getElementById('gradient').value = '0';
+        document.getElementById('max-speed').value = '90';
+        document.getElementById('target-speed').value = '80';
       });
 
+      // Handler: Play/Pause
       document.getElementById('btn-play-pause').addEventListener('click', () => CanvasRenderer.togglePlay());
     });
   </script>
